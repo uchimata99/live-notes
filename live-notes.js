@@ -137,7 +137,7 @@
     if(notes.length){ b.classList.remove('ln-hidden'); b.textContent=notes.length; } else b.classList.add('ln-hidden');
     if(extTrigger){ extTrigger.setAttribute('data-ln-count', notes.length||''); }
   }
-  function exportText(){ var t='הערות — '+C.repo+'\n========================\n\n'; var k=0; notes.forEach(function(n){ var line='['+(n.loc||'')+']\n• '+n.text; if(n.mark){ k++; line+='\n  📷 (צילום מסך מצורף — גררי לכאן את הקובץ note-'+k+'.jpg)'; } t+=line+'\n\n'; }); return t; }
+  function exportText(){ var t='הערות — '+C.repo+'\n========================\n\n'; var k=0; notes.forEach(function(n){ var line='['+(n.loc||'')+']\n• '+n.text; if(n.markUrl){ line+='\n  📷 צילום מסך: '+n.markUrl; } else if(n.mark){ k++; line+='\n  📷 (צילום מצורף — גררי לכאן את הקובץ note-'+k+'.jpg)'; } t+=line+'\n\n'; }); return t; }
   function render(){
     var items = notes.length ? notes.map(function(n){
       return '<div class="ln-item"><div class="ln-il">'+esc(n.loc)+(n.mark?' · 📷 צילום מצורף':'')+'</div><div class="ln-it">'+esc(n.text)+'</div>'+
@@ -152,7 +152,7 @@
       '<textarea class="ln-ta" id="ln-input" placeholder="'+(pendingMark?'הסבירי על מה שצילמת…':'מה לתקן כאן?')+'"></textarea>'+
       '<div class="ln-row"><button class="ln-btn ln-pri" data-a="add">＋ הוסף הערה</button><button class="ln-btn ln-gho" data-a="pen">🖊️ עט + צילום</button><button class="ln-btn ln-gho" data-a="shot">📷 צלם מסך</button></div>'+
       '<div class="ln-list">'+items+'</div>'+send+
-      '<div class="ln-hint">«עט + צילום» = סמני על המסך ולחצי «סיום סימון» — תיפתח הערה עם צילום הסימון. «צלם מסך» = צילום של המסך הנוכחי. «שלח» פותח Issue, מוריד את הצילומים, וההערות נמחקות מהמכשיר — גררי את הצילומים לתוך ה-Issue.</div>';
+      '<div class="ln-hint">«עט + צילום» = סמני על המסך ולחצי «סיום סימון». «צלם מסך» = צילום של המסך הנוכחי. «שלח» פותח Issue — אם את מחוברת, הצילומים עולים אוטומטית; אחרת יורדים למכשיר לגרירה. ההערות נמחקות מהמכשיר אחרי השליחה.</div>';
     badge();
   }
   function open(){ render(); panel.classList.remove('ln-hidden'); }
@@ -169,15 +169,28 @@
   function zoomImg(id){ var n=notes.filter(function(x){return x.id===id;})[0]; if(n&&n.mark){ var w=window.open('','_blank'); if(w)w.document.write('<img src="'+n.mark+'" style="max-width:100%">'); } }
   function send(){
     if(!notes.length){ alert('אין הערות לשליחה.'); return; }
-    var imgs=notes.filter(function(n){return n.mark;});
     var title='הערות — '+new Date().toLocaleDateString(C.lang==='he'?'he-IL':undefined);
-    var url='https://github.com/'+C.repo+'/issues/new?labels='+encodeURIComponent(C.label)+'&title='+encodeURIComponent(title)+'&body='+encodeURIComponent(exportText());
-    window.open(url,'_blank','noopener');
-    /* מורידים את הצילומים כדי שאפשר יהיה לגרור אותם לתוך ה-Issue (אי אפשר לצרף תמונה דרך כתובת) */
-    imgs.forEach(function(n,i){ dl(n.mark,'note-'+(i+1)+'.jpg'); });
-    /* אחרי שליחה ההערות נמסרו לטיפול — מנקים מהמכשיר כך שלא יישארו תלויות */
-    notes=[]; persist(); render();
-    if(imgs.length) setTimeout(function(){ alert('נפתח Issue ו-'+imgs.length+' צילומי מסך הורדו (note-1.jpg ...). גררי אותם לתוך תיבת ה-Issue לפני Submit.'); }, 250);
+    var pend=notes.filter(function(n){return n.mark&&!n.markUrl;});
+    /* פותחים חלון ריק בתוך מחוות הלחיצה כדי שלא ייחסם אחרי await של ההעלאה */
+    var win=null; try{ win=window.open('about:blank','_blank'); }catch(e){}
+    function finish(){
+      var url='https://github.com/'+C.repo+'/issues/new?labels='+encodeURIComponent(C.label)+'&title='+encodeURIComponent(title)+'&body='+encodeURIComponent(exportText());
+      if(win){ try{ win.location=url; }catch(e){ window.open(url,'_blank','noopener'); } } else { window.open(url,'_blank','noopener'); }
+      /* רק צילומים שלא עלו אוטומטית — מורידים למכשיר לגרירה ידנית */
+      var failed=notes.filter(function(n){return n.mark&&!n.markUrl;});
+      failed.forEach(function(n,i){ dl(n.mark,'note-'+(i+1)+'.jpg'); });
+      var nf=failed.length;
+      notes=[]; persist(); render();
+      if(nf) setTimeout(function(){ alert(nf+' צילומים לא עלו אוטומטית (אולי לא מחוברת) — הורדו למכשיר; גררי אותם ל-Issue.'); }, 250);
+    }
+    if(C.uploadImage && pend.length){
+      showToast('☁️ מעלה צילומים…');
+      Promise.all(pend.map(function(n,i){
+        return Promise.resolve().then(function(){ return C.uploadImage(n.mark,'note-'+Date.now()+'-'+i+'.jpg'); })
+          .then(function(res){ if(res&&res.url){ n.markUrl=res.url; n.markId=res.id; } })
+          .catch(function(){});
+      })).then(function(){ hideToast(); finish(); }, function(){ hideToast(); finish(); });
+    } else { finish(); }
   }
   fab.addEventListener('click',function(){ panel.classList.contains('ln-hidden')?open():close(); });
   panel.addEventListener('click',function(e){ var b=e.target.closest('[data-a]'); if(!b)return; var a=b.getAttribute('data-a'),id=b.getAttribute('data-id');
