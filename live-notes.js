@@ -36,7 +36,7 @@
   var SIDE = C.dir==='rtl'?'left':'right';
 
   var css=
-  '.ln-fab{position:fixed;bottom:18px;'+SIDE+':18px;z-index:2147483000;width:54px;height:54px;border-radius:50%;border:none;cursor:pointer;background:'+C.accent+';color:#15111e;font-size:24px;box-shadow:0 8px 24px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center}'+
+  '.ln-fab{position:fixed;bottom:16px;'+SIDE+':16px;z-index:2147483000;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;background:'+C.accent+';color:#15111e;font-size:20px;box-shadow:0 6px 18px rgba(0,0,0,.32);display:flex;align-items:center;justify-content:center}'+
   '.ln-badge{position:absolute;top:-4px;'+SIDE+':-4px;background:#ff7a8a;color:#fff;font:600 12px sans-serif;min-width:20px;height:20px;border-radius:10px;display:flex;align-items:center;justify-content:center;padding:0 5px}'+
   '.ln-panel{position:fixed;bottom:84px;'+SIDE+':18px;z-index:2147483000;width:min(360px,calc(100vw - 36px));max-height:74vh;overflow:auto;background:#1b1430;color:#f5eff9;border:1px solid rgba(228,205,240,.18);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.55);padding:14px;font-family:system-ui,Heebo,sans-serif;direction:'+C.dir+'}'+
   '.ln-hidden{display:none!important}'+
