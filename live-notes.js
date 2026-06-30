@@ -18,7 +18,12 @@
     accent:'#c08bff',
     always:false,            /* true = להציג תמיד (בלי דגל) */
     storeKey:null,           /* ברירת מחדל: 'livenotes_'+repo */
-    locationFn:function(){ return location.hash ? decodeURIComponent(location.hash.slice(1)) : (document.title||location.pathname); }
+    locationFn:function(){
+      var base = location.hash ? decodeURIComponent(location.hash.slice(1)) : (document.title||location.pathname);
+      var t = document.querySelector('.tabs .tab.active, .tab.active, [role="tab"][aria-selected="true"]');
+      var tab = (t && t.textContent) ? t.textContent.replace(/\s+/g,' ').trim() : '';
+      return tab ? base + ' › ' + tab : base;
+    }
   }, window.LIVE_NOTES_CONFIG||{});
 
   /* הפעלה מותנית — שלא יוצג למשתמשי קצה */
@@ -174,8 +179,19 @@
     /* פותחים חלון ריק בתוך מחוות הלחיצה כדי שלא ייחסם אחרי await של ההעלאה */
     var win=null; try{ win=window.open('about:blank','_blank'); }catch(e){}
     function finish(){
-      var url='https://github.com/'+C.repo+'/issues/new?labels='+encodeURIComponent(C.label)+'&title='+encodeURIComponent(title)+'&body='+encodeURIComponent(exportText());
-      if(win){ try{ win.location=url; }catch(e){ window.open(url,'_blank','noopener'); } } else { window.open(url,'_blank','noopener'); }
+      var body=exportText();
+      var base='https://github.com/'+C.repo+'/issues/new?labels='+encodeURIComponent(C.label)+'&title='+encodeURIComponent(title);
+      var url=base+'&body='+encodeURIComponent(body);
+      var go=function(u){ if(win){ try{ win.location=u; }catch(e){ window.open(u,'_blank','noopener'); } } else { window.open(u,'_blank','noopener'); } };
+      /* GitHub דוחה כתובת Issue ארוכה מדי (שגיאה). אם הגוף ארוך — מעתיקים ללוח
+         ופותחים Issue ריק להדבקה (Ctrl+V), במקום שגיאה. */
+      if(url.length>6000){
+        if(navigator.clipboard){ try{ navigator.clipboard.writeText(body); }catch(e){} }
+        go(base);
+        setTimeout(function(){ alert('היו הרבה הערות — הן הועתקו ללוח. הדביקי (Ctrl+V / הדבק) בגוף ה-Issue ולחצי Submit.'); }, 400);
+      } else {
+        go(url);
+      }
       /* רק צילומים שלא עלו אוטומטית — מורידים למכשיר לגרירה ידנית */
       var failed=notes.filter(function(n){return n.mark&&!n.markUrl;});
       failed.forEach(function(n,i){ dl(n.mark,'note-'+(i+1)+'.jpg'); });
