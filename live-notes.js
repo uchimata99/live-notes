@@ -71,11 +71,11 @@
   var toast=el('div','ln-toast ln-hidden',null);
   function showToast(t){ toast.textContent=t; toast.classList.remove('ln-hidden'); }
   function hideToast(){ toast.classList.add('ln-hidden'); }
-  /* טריגר חיצוני: כפתור בתוך הדף (למשל ליד ההמבורגר) במקום הכפתור הצף */
+  /* טריגר חיצוני: כפתור בתוך הדף (ליד ההמבורגר) — נוסף על הכפתור הצף,
+     שנשאר גלוי תמיד כך שגם בגלילה אפשר להגיע אליו (לא "נבלע") */
   function wireTrigger(){
     extTrigger = document.querySelector('[data-ln-trigger]');
     if(extTrigger){
-      fab.classList.add('ln-hidden');                 /* כפתור אחד בלבד — בניווט */
       extTrigger.addEventListener('click',function(ev){ ev.preventDefault(); panel.classList.contains('ln-hidden')?open():close(); });
     }
   }
